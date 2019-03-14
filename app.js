@@ -27,10 +27,11 @@ mongoose.connect('mongodb://localhost/mongodb_tutorial');
 
 // CONNECT TO MONGODB SERVER after DEFINE MODEL
 var Book = require('./models/book');
+var DriveInfo = require('./models/driveInfo');
 
 // [CONFIGURE ROUTER]
 //라우터에서 Book 모델을 사용해야 하므로 Book sckema 를 전달한다.
-var router = require('./routes')(app, Book);
+var router = require('./routes')(app, Book, DriveInfo);
 
 // [RUN SERVER]
 var server = app.listen(port, function(){
