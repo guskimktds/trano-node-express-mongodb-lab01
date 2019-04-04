@@ -2,7 +2,7 @@
   "name": "nodeserver",
   "version": "1.0.0",
   "description": "trano web server",
-  "main": "main.js",
+  "main": "app.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -11,6 +11,9 @@
   "dependencies": {
     "body-parser": "^1.18.3",
     "express": "^4.16.4",
-    "mongoose": "^5.4.18"
+    "fcm-node": "^1.4.0",
+    "mongoose": "^5.4.18",
+    "nodemailer": "^6.0.0",
+    "nodemailer-smtp-pool": "^2.8.3"
   }
 }
