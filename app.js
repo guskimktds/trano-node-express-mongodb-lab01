@@ -29,7 +29,8 @@ db.once('open', function(){
 });
 
 // sample ex) mongoose.connect('mongodb://username:password@host:port/database?options...');
-mongoose.connect('mongodb://localhost/mongodb_tutorial');
+// mongoose.connect('mongodb://localhost/mongodb_tutorial');
+mongoose.connect('mongodb://localhost/karforu');
 // [ CONFIGURE mongoose ] end
 
 // CONNECT TO MONGODB SERVER after DEFINE MODEL
