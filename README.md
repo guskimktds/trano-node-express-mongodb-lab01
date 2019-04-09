@@ -22,3 +22,9 @@
    MongoDB 사이트에서 window 64bit msi 설치파일로 설치 
 6. 연동 테스트 수행
    postman 툴을 이용해서 테스트 진행함
+   
+7. fcm push 서버 구축
+
+8. mail smtp 서버 구축
+
+
