@@ -57,10 +57,19 @@ var SmtpPool = smtpPool( {
     maxMessages:10
 });
 
-var pushServerKey = severConfig.severkey;
+var pushServerKey = severConfig.pushSeverkey;
 // [CONFIGURE ROUTER]
-//라우터에서 Book 모델을 사용해야 하므로 Book sckema 를 전달한다.
-var router = require('./routes')(app, DriveInfo, SmtpPool, pushServerKey, KarforuInfo);
+//라우터에서 사용되는 모델 또는 설정값, 메시징규격 등을 전달한다.
+//var router = require('./routes')(app, DriveInfo, SmtpPool, pushServerKey, KarforuInfo);
+//라우터를 유형별로 나눈다. index/push/mail
+var indexRouter = require('./routes/index')(app, DriveInfo, SmtpPool, KarforuInfo);
+var pushRouter = require('./routes/push')(app, pushServerKey);
+var mailRouter = require('./routes/smtp')(app, SmtpPool, KarforuInfo);
+
+//아래와 같이 rest api 라우터를 분리한다. 주석
+app.use('/', indexRouter);
+app.use('/push', pushRouter);
+app.use('/smtp', mailRouter);
 
 // [RUN SERVER]
 var server = app.listen(port, function(){

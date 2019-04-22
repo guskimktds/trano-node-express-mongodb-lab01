@@ -11,6 +11,7 @@ var karforuInfoSchema = new Schema({
     verify: String,
     author: String,
     pushToken: String,
+    pushTokenCreate: String,
     driveInfo: [ {driveInfoKey:String, route : { waypoint : String, destination : String, start_time: String, end_time : String, passengers : String, status : String, registDate : String },
             schedule : { driveType: String, drivingStartDate : String, drivingEndDate : String, nonDriving : String },
             passengerInfo : [ { name : String, phone : String, email : String } ] } ],
