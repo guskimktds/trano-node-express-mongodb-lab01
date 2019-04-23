@@ -38,6 +38,11 @@ mongoose.connect('mongodb://localhost/karforu');
 var DriveInfo = require('./models/driveInfo');
 var KarforuInfo = require('./models/karforuInfo');
 
+// yhkim 추가 셔틀 시간표
+var ShuttleTimes = require('./models/shuttleTimes');
+// yhkim 추가 셔틀/사송 회원정보
+var SsUser = require('./models/ssUser');
+
 var SmtpPool = smtpPool( {
     service: severConfig.mailservice,
     host:'localhost',
@@ -66,10 +71,14 @@ var indexRouter = require('./routes/index')(app, DriveInfo, SmtpPool, KarforuInf
 var pushRouter = require('./routes/push')(app, pushServerKey);
 var mailRouter = require('./routes/smtp')(app, SmtpPool, KarforuInfo);
 
+// yhkim add
+var ssRouter = require('./routes/ss')(app,SmtpPool,pushServerKey, ShuttleTimes,SsUser);
+
 //아래와 같이 rest api 라우터를 분리한다. 주석
 app.use('/', indexRouter);
 app.use('/push', pushRouter);
 app.use('/smtp', mailRouter);
+app.use('/ss', ssRouter);
 
 // [RUN SERVER]
 var server = app.listen(port, function(){
