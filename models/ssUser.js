@@ -7,6 +7,7 @@ var ssUserScheme = new Schema({
     pw: String,
     email:String,
     push_token:String,
+    login_token:String,
     register_confirm: {
         type: Boolean,
         default: false

@@ -33,33 +33,32 @@ module.exports = function(app,SmtpPool, pushServerKey,ShuttleTimes,SsUser)
         }
         else {
 
-          let entText;
-            encText = encryptionHelper.encrypt('data|' + ssUser.id);
-            console.log("encrypted text = " + encText);
+          let encText = encryptionHelper.encrypt('data|' + ssUser.id);
+          console.log("encrypted text = " + encText);
 
-            host=req.get('host');
-            link="http://"+req.get('host')+"/ss/verify?id="+encodeURI(encText);
+          host=req.get('host');
+          link="http://"+req.get('host')+"/ss/verify?id="+encodeURI(encText);
 
-            console.log("link : " + link);
-            mailOptions={
-              to : req.body.email,
-              //to: 'anni4ever@naver.com',
-              //to: 'gusraccoon@gmail.com',
-              subject : "KT DS 셔틀 사송 회원가입 확인",
-              html : "안녕하세요. KT DS 입니다.<br> 아래 회원가입 확인 링크를 눌러 이메일 인증을 완료해 주세요.<br>인증 완료 시, 관리자 승인 후 최종 가입 완료 됩니다.<br><a href="+link+">회원가입 확인</a>"
+          console.log("link : " + link);
+          mailOptions={
+            to : req.body.email,
+            //to: 'anni4ever@naver.com',
+            //to: 'gusraccoon@gmail.com',
+            subject : "KT DS 셔틀 사송 회원가입 확인",
+            html : "안녕하세요. KT DS 입니다.<br> 아래 회원가입 확인 링크를 눌러 이메일 인증을 완료해 주세요.<br>인증 완료 시, 관리자 승인 후 최종 가입 완료 됩니다.<br><a href="+link+">회원가입 확인</a>"
+          }
+          console.log(mailOptions);
+          smtpTransport.sendMail(mailOptions, function(error, response){
+            if(error){
+              console.log(error);
+              res.json({resCode:402, resMsg: "이메일 전송 오류"});
+              return;
+            }else{
+              console.log("Message sent: " + res.message);
+              res.json({resCode:200, resMsg: "회원 가입 완료"});
+              return;
             }
-            console.log(mailOptions);
-            smtpTransport.sendMail(mailOptions, function(error, response){
-              if(error){
-                console.log(error);
-                res.json({resCode:402, resMsg: "이메일 전송 오류"});
-                return;
-              }else{
-                console.log("Message sent: " + res.message);
-                res.json({resCode:200, resMsg: "회원 가입 완료"});
-                return;
-              }
-            });
+          });
         }
       });
     });
@@ -120,6 +119,49 @@ module.exports = function(app,SmtpPool, pushServerKey,ShuttleTimes,SsUser)
     });
 
 
+    // 로그아웃
+    router.post('/api/logout' , function(req,res) {
+      SsUser.find({ "login_token": req.body.login_token } ,function(err, userInfos){
+        if(err) {
+          res.json({ resCode: 500, resMsg:err });
+          return;
+        }
+        if(!userInfos || userInfos.length === 0) {
+          res.json({ resCode: 201, resMsg:'잘못된 토큰값입니다.' });
+          return;
+        }
+
+        SsUser.update({ id: userInfos[0].id },{login_token:""}, function(err, output){
+          //if(err) res.status(500).json({ error: 'database failure' });
+          if(err) {
+            res.json({ resCode: 501, resMsg:err });
+            console.log(err);
+            return;
+          }
+          res.json({ resCode: 200, resMsg:'OK' });
+          console.log('logout success');
+          return;
+        });
+      })
+    });
+
+    // 회원 탈퇴
+    router.delete('/api/withraw' , function(req,res) {
+      SsUser.deleteOne({ login_token: req.body.login_token } ,function(err, userInfos){
+        if(err) {
+          res.json({ resCode: 500, resMsg:err });
+          return;
+        }
+        if(!userInfos || userInfos.length === 0) {
+          res.json({ resCode: 201, resMsg:'잘못된 토큰값입니다.' });
+          return;
+        }
+        res.json({ resCode: 200, resMsg:'OK' });
+        console.log('withraw success');
+      })
+    });
+
+
     // 회원가입 시 사번 중복 확인
     router.post('/api/checkUserDupl', function(req,res){
       SsUser.find({ "id": req.body.id  } ,function(err, userInfos){
@@ -135,7 +177,7 @@ module.exports = function(app,SmtpPool, pushServerKey,ShuttleTimes,SsUser)
       })
     });
 
-    // 사용자 로그인
+    // id/pw 사용자 로그인
     router.post('/api/login', function(req,res){
       SsUser.find({ "id": req.body.id , "pw":req.body.pw} ,
       function(err, userInfos){
@@ -159,10 +201,77 @@ module.exports = function(app,SmtpPool, pushServerKey,ShuttleTimes,SsUser)
           return;
         }
 
-        res.json({ resCode: 200, resMsg:'OK' });
+        // 클라이언트에서 로그인 유지 체크 시, 로그인 토큰 response
+        if(req.body.auto_login === true) {
+          let now = new Date();
+          let login_token = encryptionHelper.encrypt(now.getTime() + "|" +req.body.id);
+          SsUser.update({ id: req.body.id }, { $set: { login_token : login_token} }, function(err, output){
+            //if(err) res.status(500).json({ error: 'database failure' });
+            if(err) {
+              console.log("error : database failure"); //error log
+            }
+            console.log(output);
+            if(!output.n) {
+              res.json( { resCode: 403, resMsg:"cannot make login token" } ); //error event
+              return;
+            }
+            console.log('SsUser login_token updated Successfully');
+            res.json({ resCode: 200, resMsg:'OK', login_token:login_token });
+          });
+        }
+        else {
+          res.json({ resCode: 200, resMsg:'OK'});
+        }
       })
     });
 
+    // 토큰을 통한 사용자 로그인
+    router.post('/api/loginWithToken', function(req,res){
+      SsUser.find({ "login_token": req.body.login_token } ,
+      function(err, userInfos){
+        if(err) {
+          res.json({ resCode: 500, resMsg:err });
+          return;
+        }
+        // 토큰이 없을 경우
+        if(!userInfos || userInfos.length === 0) {
+          res.json({ resCode: 202, resMsg:'로그인 토큰이 유효하지 않아 로그인 유지가 해제됩니다' });
+          return;
+        }
+
+        // 토큰 생성 후 2주 경과 체크
+        let now = new Date();
+        let tmp = encryptionHelper.decrypt(userInfos[0].login_token);
+        let createDt = tmp.split("|")[0];
+
+        let twoWeeks = 1000 * 60 * 60 * 24 * 2 * 7;
+        let fiveMin = 1000 * 60 * 5;  // test
+        if(createDt + (fiveMin) < now.getTime()) {
+          res.json({ resCode: 203, resMsg:'로그인 토큰이 만료되어 로그인 유지가 해제됩니다' });
+          return;
+        }
+
+
+        console.log("userInfos : " + userInfos);
+
+        // 무조건 로그인 토큰 갱신하여 클라이언트에 전달
+
+        let login_token = encryptionHelper.encrypt(now.getTime()+ "|" + req.body.id);
+        SsUser.update({ login_token: req.body.login_token }, { $set: { login_token : login_token} }, function(err, output){
+          //if(err) res.status(500).json({ error: 'database failure' });
+          if(err) {
+            console.log("error : database failure"); //error log
+          }
+          console.log(output);
+          if(!output.n) {
+            res.json( { resCode: 403, resMsg:"cannot make login token" } ); //error event
+            return;
+          }
+          console.log('SsUser login_token updated Successfully');
+          res.json({ resCode: 200, resMsg:'OK', login_token:login_token });
+        });
+      })
+    });
 
     // 비밀번호 재설정
     router.post('/api/resetPwd', function(req,res){
