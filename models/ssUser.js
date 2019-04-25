@@ -18,4 +18,5 @@ var ssUserScheme = new Schema({
     }
 });
 
+
 module.exports = mongoose.model('ssUser', ssUserScheme);

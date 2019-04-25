@@ -102,7 +102,7 @@ module.exports = function(app,SmtpPool, pushServerKey,ShuttleTimes,SsUser)
       }
       else
       {
-        res.end("<h1>Request is from unknown source");
+        res.end("Request is from unknown source");
       }
     });
 
@@ -203,8 +203,9 @@ module.exports = function(app,SmtpPool, pushServerKey,ShuttleTimes,SsUser)
 
         // 클라이언트에서 로그인 유지 체크 시, 로그인 토큰 response
         if(req.body.auto_login === true) {
+          let userId = req.body.id;
           let now = new Date();
-          let login_token = encryptionHelper.encrypt(now.getTime() + "|" +req.body.id);
+          let login_token = encryptionHelper.encrypt(now.getTime() + "|" + userId );
           SsUser.update({ id: req.body.id }, { $set: { login_token : login_token} }, function(err, output){
             //if(err) res.status(500).json({ error: 'database failure' });
             if(err) {
@@ -239,18 +240,26 @@ module.exports = function(app,SmtpPool, pushServerKey,ShuttleTimes,SsUser)
           return;
         }
 
+        console.log("loginWithToken userInfos is : " + userInfos);
+
         // 토큰 생성 후 2주 경과 체크
         let now = new Date();
         let tmp = encryptionHelper.decrypt(userInfos[0].login_token);
-        let createDt = tmp.split("|")[0];
 
+        console.log("login_token is : " + tmp);
+
+        let createDt = tmp.split('|')[0];
         let twoWeeks = 1000 * 60 * 60 * 24 * 2 * 7;
-        let fiveMin = 1000 * 60 * 5;  // test
-        if(createDt + (fiveMin) < now.getTime()) {
+        let tenSec = 1000 * 10;  // yhkim test
+
+        console.log("createDt is : " + createDt);
+        console.log("tenSec is : " + tenSec);
+        console.log("now.getTime() is : " + now.getTime());
+
+        if(Number(createDt) + (twoWeeks) < Number(now.getTime())) {
           res.json({ resCode: 203, resMsg:'로그인 토큰이 만료되어 로그인 유지가 해제됩니다' });
           return;
         }
-
 
         console.log("userInfos : " + userInfos);
 
@@ -273,6 +282,64 @@ module.exports = function(app,SmtpPool, pushServerKey,ShuttleTimes,SsUser)
       })
     });
 
+
+    // 내 정보 조회
+    router.post('/api/myInfo', function(req,res){
+
+      SsUser.find({ login_token: req.body.login_token } , function(err, userInfos){
+        if(err) {
+          res.json({ resCode: 500, resMsg:err });
+          return;
+        }
+        if(!userInfos || userInfos.length === 0) {
+          res.json({ resCode: 202, resMsg:'토큰이 유효하지 않습니다.' });
+          return;
+        }
+        console.log("userInfos : " + userInfos);
+
+        res.json({resCode:200, resMsg: "비밀번호 변경 완료", resData:userInfos[0]});
+
+      })
+    });
+
+    // 비밀번호 변경
+    router.post('/api/changePwd', function(req,res){
+
+      SsUser.find({ login_token: req.body.login_token } , function(err, userInfos){
+        if(err) {
+          res.json({ resCode: 500, resMsg:err });
+          return;
+        }
+        if(!userInfos || userInfos.length === 0) {
+          res.json({ resCode: 202, resMsg:'토큰이 유효하지 않습니다.' });
+          return;
+        }
+        console.log("userInfos : " + userInfos);
+
+        // let randomHash = sha256(req.body.email +'|'+ Math.floor((Math.random() * 100) + 54));
+        // let tmpPw = randomHash.substring(4,10);
+
+        let originPw = req.body.originPw;
+
+        if(userInfos[0].pw != originPw) {
+          res.json({ resCode: 202, resMsg:'기존 비밀번호가 일치하지 않습니다.' });
+          return;
+        }
+
+        // 임시 비밀번호 갱신
+        SsUser.update({ id: userInfos[0].id }, { $set: { pw : req.body.pw}} , function(err, output){
+          //if(err) res.status(500).json({ error: 'database failure' });
+          if(err) console.log("error : database failure"); //error log
+          console.log(output);
+          if(!output.n) res.json( { resCode: 403, resMsg:"validation error" } ); //error event
+
+          console.log('SsUser update new Pwd Successfully');
+          res.json({resCode:200, resMsg: "비밀번호 변경 완료"});
+        });
+      })
+    });
+
+
     // 비밀번호 재설정
     router.post('/api/resetPwd', function(req,res){
 
@@ -292,7 +359,7 @@ module.exports = function(app,SmtpPool, pushServerKey,ShuttleTimes,SsUser)
         let tmpPw = randomHash.substring(4,10);
 
         // 임시 비밀번호 갱신
-        SsUser.update({ id: req.body.id }, { $set: { pw : sha256(tmpPw)} }, function(err, output){
+        SsUser.update({ id: req.body.id }, { $set: { pw : sha256(req.body.id + tmpPw)} }, function(err, output){
           //if(err) res.status(500).json({ error: 'database failure' });
           if(err) console.log("error : database failure"); //error log
           console.log(output);
@@ -317,9 +384,6 @@ module.exports = function(app,SmtpPool, pushServerKey,ShuttleTimes,SsUser)
               return;
             }else{
               console.log("Message sent: " + res.message);
-
-
-
               res.json({resCode:200, resMsg: "비밀번호 재설정 완료"});
               return;
             }
